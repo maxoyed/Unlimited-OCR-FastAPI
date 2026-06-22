@@ -1,52 +1,78 @@
-"""Thin async client around the sglang OpenAI-compatible endpoint."""
+"""Async client around the sglang OpenAI-compatible endpoint.
+
+Mirrors the official Unlimited-OCR request shape: fixed temperature, the
+embedded DeepSeek-OCR no-repeat-ngram custom logit processor, an
+``images_config.image_mode`` and per-scenario ``custom_params``. Requests are
+streamed and the SSE deltas are aggregated into the final text.
+"""
 
 import asyncio
-import base64
-from typing import List, Optional
+import json
+from typing import List
 
-from openai import AsyncOpenAI
+import httpx
 
 from .config import settings
-
-_client = AsyncOpenAI(
-    base_url=settings.sglang_base_url,
-    api_key=settings.sglang_api_key,
-    timeout=settings.request_timeout,
-    max_retries=2,
-)
+from .logit_processor import CUSTOM_LOGIT_PROCESSOR, NGRAM_SIZE
+from .scenarios import Scenario
 
 _semaphore = asyncio.Semaphore(settings.max_concurrency)
 
 
-def _data_url(png_bytes: bytes) -> str:
-    b64 = base64.b64encode(png_bytes).decode("ascii")
-    return f"data:image/png;base64,{b64}"
+def _endpoint() -> str:
+    base = settings.sglang_base_url.rstrip("/")
+    if base.endswith("/v1"):
+        base = base[: -len("/v1")]
+    return f"{base}/v1/chat/completions"
 
 
-async def ocr_png(png_bytes: bytes, prompt: Optional[str] = None) -> str:
-    """Run OCR on a single PNG image and return the extracted text."""
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": prompt or settings.ocr_prompt},
-                {"type": "image_url", "image_url": {"url": _data_url(png_bytes)}},
-            ],
-        }
-    ]
+def _headers() -> dict:
+    headers = {"Content-Type": "application/json"}
+    key = settings.sglang_api_key.strip()
+    if key and key.upper() != "EMPTY":
+        headers["Authorization"] = f"Bearer {key}"
+    return headers
+
+
+def _payload(scenario: Scenario, content_parts: List[dict]) -> dict:
+    return {
+        "model": settings.ocr_model,
+        "messages": [
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": scenario.prompt}, *content_parts],
+            }
+        ],
+        "temperature": 0,
+        "skip_special_tokens": False,
+        "images_config": {"image_mode": scenario.image_mode},
+        "custom_logit_processor": CUSTOM_LOGIT_PROCESSOR,
+        "custom_params": {
+            "ngram_size": NGRAM_SIZE,
+            "window_size": scenario.window_size,
+        },
+        "stream": True,
+    }
+
+
+async def run_ocr(scenario: Scenario, content_parts: List[dict]) -> str:
+    """Run one OCR generation (one document) and return the aggregated text."""
+    payload = _payload(scenario, content_parts)
+    chunks: List[str] = []
     async with _semaphore:
-        resp = await _client.chat.completions.create(
-            model=settings.ocr_model,
-            messages=messages,
-            max_tokens=settings.max_tokens,
-            temperature=settings.temperature,
-        )
-    return (resp.choices[0].message.content or "").strip()
-
-
-async def ocr_png_batch(
-    pages: List[bytes], prompt: Optional[str] = None
-) -> List[str]:
-    """Run OCR over many images concurrently, preserving input order."""
-    tasks = [ocr_png(p, prompt) for p in pages]
-    return await asyncio.gather(*tasks)
+        async with httpx.AsyncClient(timeout=settings.request_timeout) as client:
+            async with client.stream(
+                "POST", _endpoint(), headers=_headers(), json=payload
+            ) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line or not line.startswith("data: "):
+                        continue
+                    data = line[len("data: ") :]
+                    if data == "[DONE]":
+                        break
+                    event = json.loads(data)
+                    delta = event["choices"][0].get("delta", {}).get("content", "")
+                    if delta:
+                        chunks.append(delta)
+    return "".join(chunks).strip()
