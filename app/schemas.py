@@ -5,28 +5,22 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
-class PageResult(BaseModel):
-    page: int = Field(..., description="1-based page/image index within the file.")
-    text: str = Field(..., description="Extracted text for this page.")
-    error: Optional[str] = Field(
-        default=None, description="Error message if this page failed to process."
+class DocumentResult(BaseModel):
+    name: str = Field(..., description="Source filename(s) for this document.")
+    scenario: str = Field(
+        ..., description="OCR scenario: 'single_image', 'multi_image', or 'pdf'."
     )
-
-
-class FileResult(BaseModel):
-    filename: str
-    type: str = Field(..., description="Detected file kind: 'image' or 'pdf'.")
-    page_count: int
-    text: str = Field(..., description="All pages concatenated with separators.")
-    pages: List[PageResult]
+    image_mode: str = Field(..., description="sglang image mode used ('gundam'/'base').")
+    page_count: int = Field(..., description="Number of images sent to the model.")
+    text: str = Field(..., description="Extracted text for the whole document.")
     error: Optional[str] = Field(
-        default=None, description="File-level error if the whole file failed."
+        default=None, description="Error message if this document failed."
     )
 
 
 class OCRResponse(BaseModel):
     model: str
-    results: List[FileResult]
+    results: List[DocumentResult]
 
 
 class HealthResponse(BaseModel):
