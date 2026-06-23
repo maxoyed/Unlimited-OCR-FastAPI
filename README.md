@@ -1,5 +1,7 @@
 # Unlimited-OCR-FastAPI
 
+**English** | [简体中文](README.zh-CN.md)
+
 A lightweight **FastAPI** server that turns **images and PDFs into text** using
 Baidu's [Unlimited-OCR](https://huggingface.co/baidu/Unlimited-OCR) model.
 
