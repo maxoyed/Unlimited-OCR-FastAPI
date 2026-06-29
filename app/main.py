@@ -1,4 +1,4 @@
-"""FastAPI application exposing OCR endpoints backed by an sglang model.
+"""FastAPI application exposing OCR endpoints backed by a vLLM model.
 
 Prompts and sampling parameters are fixed per scenario (see ``scenarios.py``)
 and are not user-configurable, matching the official Unlimited-OCR usage:
@@ -9,9 +9,9 @@ and are not user-configurable, matching the official Unlimited-OCR usage:
 """
 
 import asyncio
-from typing import List, Optional
+from typing import List
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 
 from . import __version__
 from . import scenarios
@@ -29,7 +29,7 @@ app = FastAPI(
     title="Unlimited-OCR FastAPI",
     description=(
         "Upload single/multiple images or PDFs and extract text using a "
-        "Baidu Unlimited-OCR model served via sglang."
+        "Baidu Unlimited-OCR model served via vLLM."
     ),
     version=__version__,
 )
@@ -40,7 +40,7 @@ async def health() -> HealthResponse:
     return HealthResponse(
         status="ok",
         model=settings.ocr_model,
-        sglang_base_url=settings.sglang_base_url,
+        vllm_base_url=settings.vllm_base_url,
     )
 
 
@@ -69,9 +69,7 @@ def _enforce_file_count(files: List[UploadFile]) -> None:
         )
 
 
-async def _ocr_images(
-    uploads: List[UploadFile], image_mode: Optional[str]
-) -> DocumentResult:
+async def _ocr_images(uploads: List[UploadFile]) -> DocumentResult:
     """OCR one (single) or many (multi-page) images as a single document."""
     parts = []
     names = []
@@ -81,10 +79,7 @@ async def _ocr_images(
         names.append(up.filename or "image")
 
     if len(uploads) == 1:
-        if (image_mode or "gundam").lower() == "base":
-            scenario = scenarios.SINGLE_IMAGE_BASE
-        else:
-            scenario = scenarios.SINGLE_IMAGE
+        scenario = scenarios.SINGLE_IMAGE
         name = names[0]
     else:
         scenario = scenarios.MULTI_IMAGE
@@ -163,11 +158,6 @@ async def _ocr_pdf(upload: UploadFile) -> DocumentResult:
 @app.post("/ocr/image", response_model=OCRResponse)
 async def ocr_image(
     files: List[UploadFile] = File(..., description="One or more image files."),
-    image_mode: Optional[str] = Form(
-        default="gundam",
-        description="Mode for a SINGLE image: 'gundam' (default) or 'base'. "
-        "Ignored when multiple images are uploaded ('base' is forced).",
-    ),
 ) -> OCRResponse:
     """OCR images. One image -> single parse; many -> one multi-page document."""
     _enforce_file_count(files)
@@ -177,7 +167,7 @@ async def ocr_image(
                 status_code=400,
                 detail=f"'{f.filename}' is not a supported image file.",
             )
-    result = await _ocr_images(files, image_mode)
+    result = await _ocr_images(files)
     return OCRResponse(model=settings.ocr_model, results=[result])
 
 
@@ -200,10 +190,6 @@ async def ocr_pdf(
 async def ocr(
     files: List[UploadFile] = File(
         ..., description="One or more image and/or PDF files."
-    ),
-    image_mode: Optional[str] = Form(
-        default="gundam",
-        description="Mode for a SINGLE image upload: 'gundam' (default) or 'base'.",
     ),
 ) -> OCRResponse:
     """Generic endpoint: images become one image-document, each PDF its own."""
@@ -233,7 +219,7 @@ async def ocr(
 
     tasks = []
     if images:
-        tasks.append(_ocr_images(images, image_mode))
+        tasks.append(_ocr_images(images))
     tasks.extend(_ocr_pdf(f) for f in pdfs)
     results = await asyncio.gather(*tasks)
     return OCRResponse(model=settings.ocr_model, results=list(results))

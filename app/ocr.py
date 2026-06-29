@@ -1,8 +1,10 @@
-"""Async client around the sglang OpenAI-compatible endpoint.
+"""Async client around the vLLM OpenAI-compatible endpoint.
 
-Mirrors the official Unlimited-OCR request shape: fixed temperature, the
-embedded DeepSeek-OCR no-repeat-ngram custom logit processor, an
-``images_config.image_mode`` and per-scenario ``custom_params``. Requests are
+Mirrors the official Unlimited-OCR vLLM request shape: fixed temperature, the
+literal ``<image>`` prompt prefix, ``skip_special_tokens=False`` and the
+DeepSeek-OCR no-repeat-ngram parameters passed via ``vllm_xargs``. The
+no-repeat-ngram logits processor itself is registered on the vLLM server
+(``--logits_processors``), so nothing about it is sent per request. Requests are
 streamed and the SSE deltas are aggregated into the final text.
 """
 
@@ -13,14 +15,13 @@ from typing import List
 import httpx
 
 from .config import settings
-from .logit_processor import CUSTOM_LOGIT_PROCESSOR, NGRAM_SIZE
-from .scenarios import Scenario
+from .scenarios import NGRAM_SIZE, Scenario
 
 _semaphore = asyncio.Semaphore(settings.max_concurrency)
 
 
 def _endpoint() -> str:
-    base = settings.sglang_base_url.rstrip("/")
+    base = settings.vllm_base_url.rstrip("/")
     if base.endswith("/v1"):
         base = base[: -len("/v1")]
     return f"{base}/v1/chat/completions"
@@ -28,26 +29,31 @@ def _endpoint() -> str:
 
 def _headers() -> dict:
     headers = {"Content-Type": "application/json"}
-    key = settings.sglang_api_key.strip()
+    key = settings.vllm_api_key.strip()
     if key and key.upper() != "EMPTY":
         headers["Authorization"] = f"Bearer {key}"
     return headers
 
 
 def _payload(scenario: Scenario, content_parts: List[dict]) -> dict:
+    # The prompt text MUST begin with a literal "<image>" or the model returns
+    # empty output. gundam (crop) vs base mode is chosen automatically by vLLM
+    # based on the number of images, so no image_mode is sent.
     return {
         "model": settings.ocr_model,
         "messages": [
             {
                 "role": "user",
-                "content": [{"type": "text", "text": scenario.prompt}, *content_parts],
+                "content": [
+                    {"type": "text", "text": f"<image>{scenario.prompt}"},
+                    *content_parts,
+                ],
             }
         ],
+        "max_tokens": settings.max_tokens,
         "temperature": 0,
         "skip_special_tokens": False,
-        "images_config": {"image_mode": scenario.image_mode},
-        "custom_logit_processor": CUSTOM_LOGIT_PROCESSOR,
-        "custom_params": {
+        "vllm_xargs": {
             "ngram_size": NGRAM_SIZE,
             "window_size": scenario.window_size,
         },

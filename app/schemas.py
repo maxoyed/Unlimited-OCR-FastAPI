@@ -10,7 +10,9 @@ class DocumentResult(BaseModel):
     scenario: str = Field(
         ..., description="OCR scenario: 'single_image', 'multi_image', or 'pdf'."
     )
-    image_mode: str = Field(..., description="sglang image mode used ('gundam'/'base').")
+    image_mode: str = Field(
+        ..., description="Image mode vLLM uses ('gundam' single / 'base' multi)."
+    )
     page_count: int = Field(..., description="Number of images sent to the model.")
     text: str = Field(..., description="Extracted text for the whole document.")
     error: Optional[str] = Field(
@@ -26,4 +28,4 @@ class OCRResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     model: str
-    sglang_base_url: str
+    vllm_base_url: str

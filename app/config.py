@@ -1,7 +1,7 @@
 """Application configuration loaded from environment variables.
 
-The OCR model itself is served separately via sglang. This service only needs
-to know how to reach that sglang OpenAI-compatible endpoint, which is provided
+The OCR model itself is served separately via vLLM. This service only needs
+to know how to reach that vLLM OpenAI-compatible endpoint, which is provided
 entirely through environment variables (see ``.env.example``).
 """
 
@@ -18,28 +18,30 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # --- sglang server -----------------------------------------------------
+    # --- vLLM server -------------------------------------------------------
     # Server root URL. The ``/v1/chat/completions`` path is appended
     # automatically, so a trailing ``/v1`` is optional here.
-    # Example: http://sglang:30000
-    sglang_base_url: str = Field(
-        default="http://localhost:30000",
-        alias="SGLANG_BASE_URL",
+    # Example: http://vllm:8000
+    vllm_base_url: str = Field(
+        default="http://localhost:8000",
+        alias="VLLM_BASE_URL",
     )
-    # API key for the sglang server. Sent as a Bearer token when set to a
-    # non-empty value other than "EMPTY". sglang servers launched without
+    # API key for the vLLM server. Sent as a Bearer token when set to a
+    # non-empty value other than "EMPTY". vLLM servers launched without
     # ``--api-key`` need no key.
-    sglang_api_key: str = Field(default="", alias="SGLANG_API_KEY")
+    vllm_api_key: str = Field(default="", alias="VLLM_API_KEY")
 
-    # Served model name as registered in sglang.
-    ocr_model: str = Field(default="Unlimited-OCR", alias="OCR_MODEL")
+    # Served model name as registered in vLLM.
+    ocr_model: str = Field(default="baidu/Unlimited-OCR", alias="OCR_MODEL")
 
     # --- behaviour ---------------------------------------------------------
-    # Max concurrent in-flight OCR calls to the sglang server (each uploaded
+    # Max concurrent in-flight OCR calls to the vLLM server (each uploaded
     # PDF / image-document is one call).
     max_concurrency: int = Field(default=4, alias="OCR_MAX_CONCURRENCY")
     # HTTP timeout (seconds) for a single OCR call.
     request_timeout: float = Field(default=1200.0, alias="OCR_REQUEST_TIMEOUT")
+    # Max tokens to generate per OCR call.
+    max_tokens: int = Field(default=8192, alias="OCR_MAX_TOKENS")
 
     # --- PDF rendering -----------------------------------------------------
     pdf_dpi: int = Field(default=300, alias="PDF_DPI")

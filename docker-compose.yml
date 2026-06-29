@@ -6,14 +6,15 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # Point this at your sglang server. From inside compose you can reach a
-      # sibling service by its name (e.g. http://sglang:30000), or use
-      # host.docker.internal to reach an sglang server on the host machine.
-      SGLANG_BASE_URL: ${SGLANG_BASE_URL:-http://host.docker.internal:30000}
-      SGLANG_API_KEY: ${SGLANG_API_KEY:-}
-      OCR_MODEL: ${OCR_MODEL:-Unlimited-OCR}
+      # Point this at your vLLM server. From inside compose you can reach a
+      # sibling service by its name (e.g. http://vllm:8000), or use
+      # host.docker.internal to reach a vLLM server on the host machine.
+      VLLM_BASE_URL: ${VLLM_BASE_URL:-http://host.docker.internal:8000}
+      VLLM_API_KEY: ${VLLM_API_KEY:-}
+      OCR_MODEL: ${OCR_MODEL:-baidu/Unlimited-OCR}
       OCR_MAX_CONCURRENCY: ${OCR_MAX_CONCURRENCY:-4}
       OCR_REQUEST_TIMEOUT: ${OCR_REQUEST_TIMEOUT:-1200}
+      OCR_MAX_TOKENS: ${OCR_MAX_TOKENS:-8192}
       PDF_DPI: ${PDF_DPI:-300}
       MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-50}
       MAX_FILES: ${MAX_FILES:-20}
