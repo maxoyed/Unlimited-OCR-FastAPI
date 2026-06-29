@@ -119,6 +119,21 @@ export OCR_MODEL=baidu/Unlimited-OCR
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
+## 前端演示
+
+[`web/`](web/) 目录是一个浏览器演示应用 —— 拖拽图片 / PDF 即可识别并查看渲染后的
+markdown，支持 grounding token 的「原文 / 清洗后」切换。它是一个独立的
+Vite + React + TypeScript 应用（TailwindCSS v4 · shadcn/ui）。后端通过
+`CORS_ALLOW_ORIGINS`（默认 `*`）开启 CORS。
+
+```bash
+cd web
+pnpm install
+pnpm dev        # http://localhost:5173（需要后端运行在 :8000）
+```
+
+详见 [`web/README.md`](web/README.md)。
+
 ## 使用示例
 
 单张图片（gundam）：

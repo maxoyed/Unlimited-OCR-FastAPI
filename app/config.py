@@ -50,6 +50,16 @@ class Settings(BaseSettings):
     max_file_size_mb: float = Field(default=50.0, alias="MAX_FILE_SIZE_MB")
     max_files: int = Field(default=20, alias="MAX_FILES")
 
+    # --- CORS --------------------------------------------------------------
+    # Comma-separated list of allowed origins for the browser demo frontend.
+    # Default "*" allows any origin (the API uses no cookies/credentials).
+    cors_allow_origins: str = Field(default="*", alias="CORS_ALLOW_ORIGINS")
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        origins = [o.strip() for o in self.cors_allow_origins.split(",")]
+        return [o for o in origins if o]
+
 
 @lru_cache
 def get_settings() -> Settings:

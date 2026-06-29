@@ -18,6 +18,7 @@ services:
       PDF_DPI: ${PDF_DPI:-300}
       MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-50}
       MAX_FILES: ${MAX_FILES:-20}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-*}
     extra_hosts:
       # Lets the container resolve host.docker.internal on Linux.
       - "host.docker.internal:host-gateway"

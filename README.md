@@ -121,6 +121,21 @@ export OCR_MODEL=baidu/Unlimited-OCR
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
+## Web demo (frontend)
+
+A browser demo lives in [`web/`](web/) — drag-and-drop images / PDFs and view
+the recognised markdown, with a raw / cleaned grounding-token toggle. It is a
+standalone Vite + React + TypeScript app (TailwindCSS v4 · shadcn/ui). The
+backend enables CORS via `CORS_ALLOW_ORIGINS` (default `*`).
+
+```bash
+cd web
+pnpm install
+pnpm dev        # http://localhost:5173  (expects the API on :8000)
+```
+
+See [`web/README.md`](web/README.md) for details.
+
 ## Usage examples
 
 Single image (gundam):

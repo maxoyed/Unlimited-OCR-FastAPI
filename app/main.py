@@ -12,6 +12,7 @@ import asyncio
 from typing import List
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 
 from . import __version__
 from . import scenarios
@@ -32,6 +33,13 @@ app = FastAPI(
         "Baidu Unlimited-OCR model served via vLLM."
     ),
     version=__version__,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
