@@ -100,7 +100,7 @@ Multipart 表单字段：
 2. 让本服务指向它并启动：
 
    ```bash
-   cp .env.example .env       # 修改 VLLM_BASE_URL / VLLM_API_KEY / OCR_MODEL
+   cp api/.env.example .env   # 修改 VLLM_BASE_URL / VLLM_API_KEY / OCR_MODEL
    docker compose up --build
    ```
 
@@ -112,6 +112,7 @@ Multipart 表单字段：
 ## 快速开始（本地，不用 Docker）
 
 ```bash
+cd api
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 export VLLM_BASE_URL=http://localhost:8000

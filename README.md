@@ -102,7 +102,7 @@ All settings come from environment variables (see [`.env.example`](.env.example)
 2. Point this service at it and start:
 
    ```bash
-   cp .env.example .env       # edit VLLM_BASE_URL / VLLM_API_KEY / OCR_MODEL
+   cp api/.env.example .env   # edit VLLM_BASE_URL / VLLM_API_KEY / OCR_MODEL
    docker compose up --build
    ```
 
@@ -114,6 +114,7 @@ All settings come from environment variables (see [`.env.example`](.env.example)
 ## Quick start (local, without Docker)
 
 ```bash
+cd api
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 export VLLM_BASE_URL=http://localhost:8000

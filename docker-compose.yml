@@ -1,6 +1,6 @@
 services:
   ocr-api:
-    build: .
+    build: ./api
     image: unlimited-ocr-fastapi:latest
     container_name: unlimited-ocr-fastapi
     ports:
