@@ -4,6 +4,8 @@ A frontend demo for the [Unlimited-OCR FastAPI](../README.md) service. Upload
 single / multiple images or PDF files, send them to the API, and view the
 recognised results as rendered markdown.
 
+![Web demo](docs/screenshot-result.png)
+
 ## Stack
 
 pnpm · Vite · React 19 · TypeScript · TailwindCSS v4 · shadcn/ui · lucide-react

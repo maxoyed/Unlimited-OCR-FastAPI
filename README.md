@@ -123,10 +123,22 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ## Web demo (frontend)
 
-A browser demo lives in [`web/`](web/) — drag-and-drop images / PDFs and view
-the recognised markdown, with a raw / cleaned grounding-token toggle. It is a
-standalone Vite + React + TypeScript app (TailwindCSS v4 · shadcn/ui). The
-backend enables CORS via `CORS_ALLOW_ORIGINS` (default `*`).
+A standalone browser demo lives in [`web/`](web/): drag-and-drop images / PDFs
+and view the recognised markdown. Built with **Vite · React · TypeScript ·
+TailwindCSS v4 · shadcn/ui · lucide-react**.
+
+![Web demo](web/docs/screenshot-result.png)
+
+Features:
+
+- Drag-and-drop / click upload with client-side validation mirroring the
+  backend limits (≤ 20 files, ≤ 50 MB each).
+- Calls the unified `POST /ocr` endpoint and faithfully reflects its semantics
+  (multiple images → one multi-page document, each PDF its own).
+- Results render as markdown (headings, tables, lists). Grounding tokens
+  (`<|ref|>` / `<|det|>`) are cleaned by default, with a **raw / cleaned**
+  toggle and a copy button.
+- Live backend health badge and light / dark theme.
 
 ```bash
 cd web
@@ -134,7 +146,8 @@ pnpm install
 pnpm dev        # http://localhost:5173  (expects the API on :8000)
 ```
 
-See [`web/README.md`](web/README.md) for details.
+The backend must allow the frontend origin via CORS (`CORS_ALLOW_ORIGINS`,
+default `*`). See [`web/README.md`](web/README.md) for details.
 
 ## Usage examples
 
