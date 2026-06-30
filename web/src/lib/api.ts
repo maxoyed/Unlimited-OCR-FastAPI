@@ -12,9 +12,9 @@ export interface DocumentResult {
   name: string
   /** OCR scenario: 'single_image', 'multi_image', or 'pdf'. */
   scenario: string
-  /** Image mode vLLM uses ('gundam' single / 'base' multi). */
+  /** Image mode used per page/image (always 'gundam'). */
   image_mode: string
-  /** Number of images sent to the model. */
+  /** Number of pages/images parsed. */
   page_count: number
   /** Extracted text for the whole document. */
   text: string

@@ -11,9 +11,9 @@ class DocumentResult(BaseModel):
         ..., description="OCR scenario: 'single_image', 'multi_image', or 'pdf'."
     )
     image_mode: str = Field(
-        ..., description="Image mode vLLM uses ('gundam' single / 'base' multi)."
+        ..., description="Image mode used per page/image (always 'gundam')."
     )
-    page_count: int = Field(..., description="Number of images sent to the model.")
+    page_count: int = Field(..., description="Number of pages/images parsed.")
     text: str = Field(..., description="Extracted text for the whole document.")
     error: Optional[str] = Field(
         default=None, description="Error message if this document failed."

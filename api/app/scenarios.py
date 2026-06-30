@@ -30,18 +30,25 @@ SINGLE_IMAGE = Scenario(
     window_size=128,
 )
 
-# Multiple images in one document -> vLLM falls back to base mode automatically.
+# Multiple images in one document -> each image is OCR'd individually in gundam
+# (crop) mode and the results are concatenated, for the same reason as PDFs:
+# one "Multi page parsing." base-mode request over all images degenerates into
+# runaway repetition on a dense image, so we parse image-by-image instead.
 MULTI_IMAGE = Scenario(
     name="multi_image",
-    prompt="Multi page parsing.",
-    image_mode="base",
-    window_size=1024,
+    prompt="document parsing.",
+    image_mode="gundam",
+    window_size=128,
 )
 
-# PDF, rasterised to one image per page -> base mode.
+# PDF, rasterised to one image per page -> each page is OCR'd individually in
+# gundam (crop) mode, exactly like a single image. Sending every page in one
+# "Multi page parsing." base-mode request lets the model degenerate into
+# runaway repetition on a dense page and burn the whole token budget, so we
+# parse page-by-page and concatenate the results.
 PDF = Scenario(
     name="pdf",
-    prompt="Multi page parsing.",
-    image_mode="base",
-    window_size=1024,
+    prompt="document parsing.",
+    image_mode="gundam",
+    window_size=128,
 )
