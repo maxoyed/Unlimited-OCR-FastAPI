@@ -174,5 +174,5 @@ curl -X POST http://localhost:8000/ocr/pdf -F "files=@document.pdf"
 - 本服务**不进行任何模型部署**；它只负责处理上传、PDF 栅格化，并使用官方
   Unlimited-OCR 请求格式调用你的 vLLM 接口。
 - no-repeat-ngram logits processor 在 vLLM 服务端注册，**不会**随每个请求发送 ——
-  因此本服务无需依赖 sglang/torch。
+  因此本服务只是一层轻量 HTTP 代理，无需任何模型 / ML（torch）依赖。
 - 请求在内部以流式方式从 vLLM 读取，并聚合为接口最终返回的文字。

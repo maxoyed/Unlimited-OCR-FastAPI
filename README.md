@@ -181,6 +181,7 @@ curl -X POST http://localhost:8000/ocr/pdf -F "files=@document.pdf"
   PDF rasterisation, and calls to your vLLM endpoint using the official
   Unlimited-OCR request format.
 - The no-repeat-ngram logits processor is registered on the vLLM server, so it
-  is **not** sent per request — this service needs no sglang/torch dependency.
+  is **not** sent per request — this service stays a thin HTTP layer with no
+  model / ML (torch) dependencies.
 - Requests are streamed from vLLM internally and aggregated into the final text
   returned by the API.
