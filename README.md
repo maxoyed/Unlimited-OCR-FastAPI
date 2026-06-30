@@ -28,12 +28,16 @@ matching the official usage:
 | Scenario          | Prompt                 | `image_mode` | `ngram_size` | `window_size` |
 | ----------------- | ---------------------- | ------------ | ------------ | ------------- |
 | Single image      | `document parsing.`    | `gundam`     | 35           | 128           |
-| Multiple images   | `Multi page parsing.`  | `base`       | 35           | 1024          |
-| PDF               | `Multi page parsing.`  | `base`       | 35           | 1024          |
+| Multiple images   | `document parsing.`    | `gundam`     | 35           | 128           |
+| PDF               | `document parsing.`    | `gundam`     | 35           | 128           |
 
-vLLM chooses the image mode automatically: a single image uses `gundam` (crop)
-mode, while multi-image / PDF requests fall back to `base` mode. The
-`image_mode` is reported back for information only and is not client-selectable.
+Every page/image is parsed **individually** in `gundam` (crop) mode, and the
+results are concatenated into one document. Sending all pages in a single
+`Multi page parsing.` `base`-mode request lets the model degenerate into runaway
+`<|det|>` coordinate repetition on a dense page and burn the whole token budget;
+per-item parsing reads dense pages at full resolution and contains any failure
+to its own page. The `image_mode` is reported back for information only and is
+not client-selectable.
 
 ## Endpoints
 
@@ -59,7 +63,7 @@ Interactive docs are at `/docs`.
     {
       "name": "invoice.pdf",
       "scenario": "pdf",
-      "image_mode": "base",
+      "image_mode": "gundam",
       "page_count": 2,
       "text": "…extracted text…",
       "error": null

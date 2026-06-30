@@ -5,11 +5,12 @@ and are not user-configurable, matching the official Unlimited-OCR usage:
 
 * single image  -> "document parsing."   (gundam, window 128)
 * multiple images -> "Multi page parsing." (base, window 1024) as one document
-* PDF           -> "Multi page parsing." (base, window 1024) per file
+* PDF           -> "document parsing." (gundam, window 128) per page, the page
+  texts concatenated into one document
 """
 
 import asyncio
-from typing import List
+from typing import List, Optional, Tuple
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -77,8 +78,36 @@ def _enforce_file_count(files: List[UploadFile]) -> None:
         )
 
 
+async def _ocr_parts_individually(
+    parts: List[dict], labels: List[str]
+) -> Tuple[str, Optional[str]]:
+    """OCR each image part on its own (gundam) and concatenate the texts.
+
+    One request per part gives every page/image the higher effective resolution
+    of single-image parsing and isolates a hard item: repetition degeneration
+    or an upstream failure stays contained to its own page instead of corrupting
+    the whole document. Calls run concurrently, throttled by run_ocr's shared
+    semaphore. ``labels`` name each part for error reporting (e.g. "page 3" or
+    "image 2 (foo.png)"); a failed part is dropped from the text and recorded.
+    """
+    results = await asyncio.gather(
+        *(run_ocr(scenarios.SINGLE_IMAGE, [part]) for part in parts),
+        return_exceptions=True,
+    )
+
+    texts: List[str] = []
+    errors: List[str] = []
+    for label, res in zip(labels, results):
+        if isinstance(res, Exception):
+            errors.append(f"{label}: {res}")
+        elif res:
+            texts.append(res)
+
+    return "\n\n".join(texts), ("; ".join(errors) if errors else None)
+
+
 async def _ocr_images(uploads: List[UploadFile]) -> DocumentResult:
-    """OCR one (single) or many (multi-page) images as a single document."""
+    """OCR one (single) or many images, each parsed individually in gundam mode."""
     parts = []
     names = []
     for up in uploads:
@@ -89,32 +118,25 @@ async def _ocr_images(uploads: List[UploadFile]) -> DocumentResult:
     if len(uploads) == 1:
         scenario = scenarios.SINGLE_IMAGE
         name = names[0]
+        labels = [names[0]]
     else:
         scenario = scenarios.MULTI_IMAGE
         name = f"{len(names)} images: " + ", ".join(names)
+        labels = [f"image {i + 1} ({names[i]})" for i in range(len(names))]
 
-    try:
-        text = await run_ocr(scenario, parts)
-        return DocumentResult(
-            name=name,
-            scenario=scenario.name,
-            image_mode=scenario.image_mode,
-            page_count=len(parts),
-            text=text,
-        )
-    except Exception as exc:  # noqa: BLE001 - surface upstream/model errors
-        return DocumentResult(
-            name=name,
-            scenario=scenario.name,
-            image_mode=scenario.image_mode,
-            page_count=len(parts),
-            text="",
-            error=str(exc),
-        )
+    text, error = await _ocr_parts_individually(parts, labels)
+    return DocumentResult(
+        name=name,
+        scenario=scenario.name,
+        image_mode=scenario.image_mode,
+        page_count=len(parts),
+        text=text,
+        error=error,
+    )
 
 
 async def _ocr_pdf(upload: UploadFile) -> DocumentResult:
-    """OCR a single PDF (rasterised to one image per page) as one document."""
+    """OCR a single PDF, parsing each rasterised page individually in gundam mode."""
     name = upload.filename or "document.pdf"
     scenario = scenarios.PDF
     try:
@@ -143,24 +165,16 @@ async def _ocr_pdf(upload: UploadFile) -> DocumentResult:
         )
 
     parts = [png_content_part(p) for p in pages]
-    try:
-        text = await run_ocr(scenario, parts)
-        return DocumentResult(
-            name=name,
-            scenario=scenario.name,
-            image_mode=scenario.image_mode,
-            page_count=len(parts),
-            text=text,
-        )
-    except Exception as exc:  # noqa: BLE001 - surface upstream/model errors
-        return DocumentResult(
-            name=name,
-            scenario=scenario.name,
-            image_mode=scenario.image_mode,
-            page_count=len(parts),
-            text="",
-            error=str(exc),
-        )
+    labels = [f"page {i + 1}" for i in range(len(parts))]
+    text, error = await _ocr_parts_individually(parts, labels)
+    return DocumentResult(
+        name=name,
+        scenario=scenario.name,
+        image_mode=scenario.image_mode,
+        page_count=len(parts),
+        text=text,
+        error=error,
+    )
 
 
 @app.post("/ocr/image", response_model=OCRResponse)

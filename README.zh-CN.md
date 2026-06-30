@@ -27,11 +27,13 @@ no-repeat-ngram 参数（`ngram_size` / `window_size`）。
 | 场景      | 提示词                | `image_mode` | `ngram_size` | `window_size` |
 | --------- | --------------------- | ------------ | ------------ | ------------- |
 | 单张图片  | `document parsing.`   | `gundam`     | 35           | 128           |
-| 多张图片  | `Multi page parsing.` | `base`       | 35           | 1024          |
-| PDF       | `Multi page parsing.` | `base`       | 35           | 1024          |
+| 多张图片  | `document parsing.`   | `gundam`     | 35           | 128           |
+| PDF       | `document parsing.`   | `gundam`     | 35           | 128           |
 
-vLLM 会自动选择图像模式：单张图片使用 `gundam`（crop）模式，多张图片 / PDF 自动
-回退到 `base` 模式。`image_mode` 仅作为信息返回，不可由客户端指定。
+每一页 / 每张图片都**单独**以 `gundam`（crop）模式解析，再把结果拼接成一个文档。
+若把所有页塞进一个 `Multi page parsing.` `base` 模式请求，模型会在密集页面上退化成
+`<|det|>` 坐标 token 的死循环、烧光整个 token 预算；逐项解析能以全分辨率读清密集页面，
+并把单页失败隔离在该页内。`image_mode` 仅作为信息返回，不可由客户端指定。
 
 ## 接口
 
@@ -57,7 +59,7 @@ Multipart 表单字段：
     {
       "name": "invoice.pdf",
       "scenario": "pdf",
-      "image_mode": "base",
+      "image_mode": "gundam",
       "page_count": 2,
       "text": "…识别出的文字…",
       "error": null
